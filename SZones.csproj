@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<LangVersion>preview</LangVersion>
+		<TargetFrameworks>net472</TargetFrameworks>
+		<AssemblyName>SZones</AssemblyName>
+		<RootNamespace>SZones</RootNamespace>
+		<NoWarn>$(NoWarn);CS0436</NoWarn>
+		<RunPostBuildEvent>Always</RunPostBuildEvent>
+		<Nullable>annotations</Nullable>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+		<CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="RocketMod.Modern.Dependencies" Version="1.*-*">
+			<IncludeAssets>compile</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="RocketMod.Modern.Generator" Version="1.*-*" />
+	</ItemGroup>
+</Project>
