@@ -1,0 +1,68 @@
+name: .NET build & test.
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Setup dotnet
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: | 
+          6.0.x
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+      with:
+        vs-version: '17.2.1'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: msbuild /p:Configuration=Release
+
+    - name: Test
+      run: dotnet test --no-build --verbosity normal
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: release
+        path: bin\Release\net472
+    
+    - name: Create release.zip
+      run: |
+        powershell Compress-Archive bin\Release\net472 release.zip
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: Workflow${{ github.run_id }}
+        release_name: ${{ github.actor }} Workflow release
+        draft: false
+        prerelease: false
+    
+    - name: Upload Release Asset
+      id: upload-release-asset 
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} 
+        asset_path: ./release.zip
+        asset_name: release.zip
+        asset_content_type: application/zip
