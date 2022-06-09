@@ -5,7 +5,7 @@ public class SpheroidZone : Zone<SpheroidZoneController>
 {
     protected float radius;
     [XmlAttribute]
-    public float Radius
+    public virtual float Radius
     {
         get => radius;
         set

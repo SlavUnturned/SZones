@@ -26,12 +26,12 @@ public sealed partial class ZoneManager : RocketPlugin<Config>
     public static Zone Get(string name) => Instance[name];
     public Zone this[string name] => Zones.FirstOrDefault(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
 
-    static void PlayerExitHandler(Player player, Zone zone)
+    private static void PlayerExitHandler(Player player, Zone zone)
     {
         player.ReceiveMessage($"Exit {zone.Name}");
     }
 
-    static void PlayerEnterHandler(Player player, Zone zone)
+    private static void PlayerEnterHandler(Player player, Zone zone)
     {
         player.ReceiveMessage($"Enter {zone.Name}");
     }

@@ -25,20 +25,20 @@ public abstract class Zone
 
     [XmlIgnore]
     protected GameObject Object;
-    static GameObject _prefab;
+    private static GameObject _prefab;
     protected static GameObject Prefab => _prefab ??= (Assets.find(EAssetType.ITEM, 325) as ItemBarricadeAsset).barricade; // spawn locker serverside with collision. original idea: Greenorine
     public Zone() { }
     internal virtual void Initialize()
     {
         if (Object is { })
             return;
-        DontDestroyOnLoad(Object = Instantiate(Prefab));
-        Destroy(Object.GetComponent<Rigidbody>());
+        UnityObject.DontDestroyOnLoad(Object = UnityObject.Instantiate(Prefab));
+        UnityObject.Destroy(Object.GetComponent<Rigidbody>());
         Position = position;
     }
     internal virtual void Dispose()
     {
-        Destroy(Object);
+        UnityObject.Destroy(Object);
     }
 }
 public abstract class Zone<TController> : Zone

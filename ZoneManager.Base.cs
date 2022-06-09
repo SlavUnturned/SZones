@@ -3,7 +3,7 @@
 // this base handling shutdown and multiple instances of this component
 partial class ZoneManager
 {
-    ZoneManager() { }
+    private ZoneManager() { }
     public override void LoadPlugin()
     {
         AssertInstance(false);
@@ -16,31 +16,37 @@ partial class ZoneManager
         base.UnloadPlugin(state);
         Instance = null;
     }
-    static bool InstanceExists() => Instance is not null;
-    static void AssertInstance(bool exists)
+
+    private static bool InstanceExists() => Instance is not null;
+
+    private static void AssertInstance(bool exists)
     {
         if (InstanceExists() != exists)
-            throw new Exception($"{typeof(ZoneManager).FullName} instance already exists, use {nameof(ZoneManager)}.{nameof(Instance)} to access it's instance.");
+            throw new Exception($"{typeof(ZoneManager).FullName} instance already {(exists ? "not exists" : $"exists, use {nameof(ZoneManager)}.{nameof(Instance)} to access it's instance")}.");
     }
     public static ZoneManager Instance { get; private set; }
-    void StopHandlingShutdown()
+
+    private void StopHandlingShutdown()
     {
         Application.quitting -= OnShutdown;
         Provider.onCommenceShutdown -= OnShutdown;
     }
-    void StartHandlingShutdown()
+
+    private void StartHandlingShutdown()
     {
         StopHandlingShutdown();
         Application.quitting += OnShutdown;
         Provider.onCommenceShutdown += OnShutdown;
     }
-    void OnShutdown()
+
+    private void OnShutdown()
     {
         if (Instance is null)
             return;
         StopHandlingShutdown();
         UnloadPlugin();
     }
-    void OnApplicationQuit() => OnShutdown();
-    void OnDestroy() => OnShutdown();
+
+    private void OnApplicationQuit() => OnShutdown();
+    private void OnDestroy() => OnShutdown();
 }

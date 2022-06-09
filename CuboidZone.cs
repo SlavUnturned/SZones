@@ -3,9 +3,9 @@
 [XmlType("Cuboid")]
 public class CuboidZone : Zone<CuboidZoneController>
 {
-    Vector3 size;
+    protected Vector3 size;
     [XmlElement]
-    public Vector3 Size
+    public virtual Vector3 Size
     {
         get => size;
         set

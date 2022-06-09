@@ -11,7 +11,7 @@ public abstract class ZoneController : MonoBehaviour
         Zone = zone;
     }
 
-    void SetEnterState(Collider other, bool state)
+    private void SetEnterState(Collider other, bool state)
     {
         var @object = other?.gameObject;
         if (state) OnEnter?.Invoke(@object);
@@ -22,23 +22,24 @@ public abstract class ZoneController : MonoBehaviour
     protected void OnTriggerEnter(Collider other) => SetEnterState(other, true);
     protected void OnTriggerExit(Collider other) => SetEnterState(other, false);
 
-    List<CSteamID> EnteredPlayers = new();
-    void SetEnterState(Player player, bool state)
+    private readonly List<CSteamID> enteredPlayers = new();
+    public IReadOnlyCollection<CSteamID> EnteredPlayers => enteredPlayers;
+    protected void SetEnterState(Player player, bool state)
     {
         if (!player)
             return;
         var id = player.channel.owner.playerID.steamID;
-        var entered = EnteredPlayers.Contains(id);
+        var entered = enteredPlayers.Contains(id);
         if (entered != state)
         {
             if (state)
             {
-                EnteredPlayers.Add(id);
+                enteredPlayers.Add(id);
                 OnPlayerEnter?.Invoke(player);
             }
             else
             {
-                EnteredPlayers.RemoveAll(x => x == id);
+                enteredPlayers.RemoveAll(x => x == id);
                 OnPlayerExit?.Invoke(player);
             }
         }
