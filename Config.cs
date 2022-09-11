@@ -22,4 +22,22 @@ public partial class Config : IRocketPluginConfiguration
             Size = new(5, 5, 5)
         });
     }
+    public void Create(Zone zone)
+    {
+        conf.Zones.Add(zone);
+        zone.Initialize();
+        Save();
+    }
+    public void Delete(Zone zone)
+    {
+        zone.Dispose();
+        conf.Zones.Remove(zone);
+        Save();
+    }
+    public void Save()
+    {
+        var config = inst.Configuration;
+        lock (config)
+            config.Save();
+    }
 }

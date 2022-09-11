@@ -18,6 +18,7 @@ global using SDG.Framework.Utilities;
 global using System;
 global using System.Runtime.CompilerServices;
 global using System.Runtime.InteropServices;
+global using System.Runtime.Serialization;
 global using System.Collections.Generic;
 global using System.Diagnostics;
 global using System.IO;
@@ -30,6 +31,7 @@ global using System.Threading.Tasks;
 global using System.Xml.Serialization;
 global using Steamworks;
 global using UnityEngine;
+global using Newtonsoft.Json;
 global using Color = UnityEngine.Color;
 global using UnityComponent = UnityEngine.Component;
 global using UnityObject = UnityEngine.Object;
@@ -56,10 +58,11 @@ public static partial class Utils
     public static ZoneManager inst => ZoneManager.Instance;
     public static Config conf => ZoneManager.Instance.Configuration.Instance;
     //
-    public static void ReceiveMessage(this P player, string message, Color? color = null)
+    public static void ReceiveMessage(this P player, object message, Color? color = null)
     {
+        var text = "" + message;
         TaskDispatcher.QueueOnMainThread(() => {
-            ChatManager.serverSendMessage(message, color ?? Color.cyan, null, player.channel.owner);
+            ChatManager.serverSendMessage(text, color ?? Color.cyan, null, player.channel.owner);
         });
     }
 }

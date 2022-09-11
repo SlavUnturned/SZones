@@ -3,6 +3,8 @@
 [XmlType("Spheroid")]
 public class SpheroidZone : Zone<SpheroidZoneController>
 {
+    public override string Name => base.Name;
+
     protected float radius;
     [XmlAttribute]
     public virtual float Radius

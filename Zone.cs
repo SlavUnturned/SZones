@@ -2,7 +2,7 @@
 
 [XmlInclude(typeof(SpheroidZone))]
 [XmlInclude(typeof(CuboidZone))]
-public abstract class Zone
+public abstract partial class Zone
 {
     [XmlAttribute]
     public virtual string Name { get; set; }
@@ -20,10 +20,9 @@ public abstract class Zone
         }
     }
 
-    [XmlIgnore]
+    [XmlIgnore, JsonIgnore]
     public virtual ZoneController Controller { get; protected set; }
 
-    [XmlIgnore]
     protected GameObject Object;
     private static GameObject _prefab;
     protected static GameObject Prefab => _prefab ??= (Assets.find(EAssetType.ITEM, 325) as ItemBarricadeAsset).barricade; // spawn locker serverside with collision. original idea: Greenorine
@@ -40,11 +39,16 @@ public abstract class Zone
     {
         UnityObject.Destroy(Object);
     }
+
+    public override string ToString() => GetType().Name+" "+JsonConvert.SerializeObject(this, converters: new ValueTypeToStringJsonConverter())
+        .Replace("\":", "\": ")
+        .Replace("\",", "\", ")
+        .Replace("\"", "");
 }
 public abstract class Zone<TController> : Zone
     where TController : ZoneController
 {
-    [XmlIgnore]
+    [XmlIgnore, JsonIgnore]
     public virtual new TController Controller { get => (TController)base.Controller; private set => base.Controller = value; }
 
     public Zone() { }
