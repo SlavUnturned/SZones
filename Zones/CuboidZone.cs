@@ -5,26 +5,27 @@ public class CuboidZone : Zone<CuboidZoneController>
 {
     public override string Name => base.Name;
 
+    public static float SizeModifier = 1.4f;
     protected Vector3 size;
     [XmlElement]
-    public virtual Vector3 Size
+    public virtual SVector3 Size
     {
         get => size;
         set
         {
             size = value;
-            if (Controller is { })
-                Controller.Collider.size = size*1.4f;
+            if (Controller is null) return;
+            Controller.Collider.size = size * SizeModifier;
         }
     }
-    public override Vector3 Position
+    public override SVector3 Position
     {
         get => base.Position;
         set
         {
             base.Position = value;
-            if (Controller is { })
-                Controller.Collider.center = Position;
+            if (Controller is null) return;
+            Controller.Collider.center = Position;
         }
     }
 

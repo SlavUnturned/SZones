@@ -40,5 +40,7 @@ public static partial class Translations
     #endregion
     // You can write static/const string fields(translations) here. By default _ will be trimmed
     public const string
-        Hello = "Hello from RocketMod.Modern!"; // use TranslateHello method to translate(initializer is default value for translation)
+        Create = "Zone {0} created.",
+        Delete = "Zone {0} deleted.",
+        Node = "Added node for zone {0}.";
 }

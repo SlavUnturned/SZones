@@ -1,7 +1,4 @@
-﻿using UnityEngine;
-using UnityEngine.UIElements;
-
-namespace SZones;
+﻿namespace SZones;
 
 public class ZoneCommand : IRocketCommand
 {
@@ -15,7 +12,7 @@ public class ZoneCommand : IRocketCommand
     public string Name => "zone";
 
     public string Help => Name;
-    public string Syntax => "create/delete/info";
+    public string Syntax => "create/delete/node/info";
 
 
     private readonly List<string> aliases = new();
@@ -40,53 +37,79 @@ public class ZoneCommand : IRocketCommand
         var lowerZoneName = zoneName.ToLower();
         Zone zone = null;
         object message = $"/{Name} [{Syntax}] [zone] |[type] [size]|";
-        bool FindZone() => (zone = conf.Zones.FirstOrDefault(x => x.Name.ToLower().Contains(lowerZoneName))) is not null;
-        void ZoneNotFound() => message = $"Zone {zoneName} not found.";
-        switch (action)
+        void Return(string msg = null)
         {
-            case "create":
-                var zoneType = GetArgument(2, true);
-                var zoneSize = GetArgument(3, true);
-                float.TryParse(zoneSize, out var size);
-                size = Math.Max(0.1f, size);
-                switch (zoneType)
-                {
-                    case "cube":
-                    case "cuboid":
-                        zone = new CuboidZone { Size = size * Vector3.one };
-                        break;
-                    default:
-                    case "sphere":
-                    case "spheroid":
-                        zone = new SpheroidZone { Radius = size };
-                        break;
-                }
-                message = $"Zone {zone.Name = zoneName} created.";
-                zone.Position = position;
-                conf.Create(zone);
-                break;
-
-            case "delete":
-            case "remove":
-                if(!FindZone())
-                {
-                    ZoneNotFound();
-                    break;
-                }
-                conf.Delete(zone);
-                message = $"Zone {zone.Name} deleted.";
-                break;
-
-            case "info":
-            case "information":
-                if (!FindZone())
-                {
-                    ZoneNotFound();
-                    break;
-                }
-                message = zone;
-                break;
+            message = msg ?? message;
+            throw new WrongUsageOfCommandException(null, null);
         }
+        void TryFindZone()
+        {
+            if (!FindZone())
+                ZoneNotFound();
+        }
+        bool FindZone() => (zone = conf.Zones.FirstOrDefault(x => x.Name.ToLower().Contains(lowerZoneName))) is not null;
+        void ZoneNotFound() => Return($"Zone {zoneName} not found.");
+        try
+        {
+            switch (action)
+            {
+                case "create":
+                    {
+                        var zoneType = GetArgument(2, true);
+                        var zoneSize = GetArgument(3, true);
+                        float.TryParse(zoneSize, out var size);
+                        size = Math.Max(0.1f, size);
+                        switch (zoneType)
+                        {
+                            case "custom":
+                                zone = new CustomZone { };
+                                break;
+                            case "cube":
+                            case "cuboid":
+                                zone = new CuboidZone { Size = size * Vector3.one };
+                                break;
+                            default:
+                            case "sphere":
+                            case "spheroid":
+                                zone = new SpheroidZone { Radius = size };
+                                break;
+                        }
+                        message = TranslateCreate(zone.Name = zoneName);
+                        zone.Position = position;
+                        conf.Create(zone);
+                        break;
+                    }
+
+                case "delete":
+                case "remove":
+                    {
+                        TryFindZone();
+                        conf.Delete(zone);
+                        message = TranslateDelete(zoneName);
+                        break;
+                    }
+
+                case "node":
+                    {
+                        TryFindZone();
+                        if (zone is not CustomZone customZone)
+                            ZoneNotFound();
+                        customZone.Nodes.Add(position);
+                        conf.Save();
+                        message = TranslateNode(zone.Name);
+                        break;
+                    }
+
+                case "info":
+                case "information":
+                    {
+                        TryFindZone();
+                        message = zone;
+                        break;
+                    }
+            }
+        }
+        catch (WrongUsageOfCommandException) { }
         player.ReceiveMessage(message);
     }
 }

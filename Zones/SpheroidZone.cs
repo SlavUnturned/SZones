@@ -5,6 +5,7 @@ public class SpheroidZone : Zone<SpheroidZoneController>
 {
     public override string Name => base.Name;
 
+    public static float RadiusModifier = 1f;
     protected float radius;
     [XmlAttribute]
     public virtual float Radius
@@ -13,8 +14,8 @@ public class SpheroidZone : Zone<SpheroidZoneController>
         set
         {
             radius = value;
-            if (Controller is { })
-                Controller.Collider.radius = radius;
+            if (Controller is null) return;
+            Controller.Collider.radius = radius * RadiusModifier;
         }
     }
     public SpheroidZone() : base()

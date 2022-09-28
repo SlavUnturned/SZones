@@ -2,6 +2,7 @@
 
 [XmlInclude(typeof(SpheroidZone))]
 [XmlInclude(typeof(CuboidZone))]
+[XmlInclude(typeof(CustomZone))]
 public abstract partial class Zone
 {
     [XmlAttribute]
@@ -9,16 +10,17 @@ public abstract partial class Zone
 
     protected Vector3 position;
     [XmlElement]
-    public virtual Vector3 Position
+    public virtual SVector3 Position
     {
         get => position;
         set
         {
             position = value;
-            if (Object is { })
-                Object.transform.position = value;
+            if (Object is null) return;
+            Object.transform.position = value;
         }
     }
+    public virtual bool ShouldSerializePosition() => true;    
 
     [XmlIgnore, JsonIgnore]
     public virtual ZoneController Controller { get; protected set; }
@@ -29,8 +31,7 @@ public abstract partial class Zone
     public Zone() { }
     internal virtual void Initialize()
     {
-        if (Object is { })
-            return;
+        if (Object is not null) return;
         UnityObject.DontDestroyOnLoad(Object = UnityObject.Instantiate(Prefab));
         UnityObject.Destroy(Object.GetComponent<Rigidbody>());
         Position = position;
@@ -40,10 +41,7 @@ public abstract partial class Zone
         UnityObject.Destroy(Object);
     }
 
-    public override string ToString() => GetType().Name+" "+JsonConvert.SerializeObject(this, converters: new ValueTypeToStringJsonConverter())
-        .Replace("\":", "\": ")
-        .Replace("\",", "\", ")
-        .Replace("\"", "");
+    public override string ToString() => ToJsonString(this, true, new ValueTypeToStringJsonConverter());
 }
 public abstract class Zone<TController> : Zone
     where TController : ZoneController
