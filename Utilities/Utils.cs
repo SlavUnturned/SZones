@@ -59,6 +59,16 @@ public static partial class Utils
     public static ZoneManager inst => ZoneManager.Instance;
     public static Config conf => ZoneManager.Instance.Configuration.Instance;
     //
+
+    public static T FindByName<T>(this IEnumerable<T> enumerable, Func<T, string> nameGetter, string name, bool fullName = false)
+    {
+        var lowerName = name.ToLower();
+        return enumerable.FirstOrDefault(fullName ? 
+            (x => nameGetter(x).ToLower().Contains(lowerName)) :
+            (x => nameGetter(x).Equals(lowerName, StringComparison.OrdinalIgnoreCase))
+        );
+    }
+
     public static void ReceiveMessage(this P player, object message, Color? color = null)
     {
         foreach (var text in ("" + message).Split('\n'))

@@ -42,5 +42,6 @@ public static partial class Translations
     public const string
         Create = "Zone {0} created.",
         Delete = "Zone {0} deleted.",
-        Node = "Added node for zone {0}.";
+        Node = "Added node for zone {0}.",
+        Teleport = "Teleported to zone {0}.";
 }

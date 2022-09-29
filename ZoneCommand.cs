@@ -12,7 +12,7 @@ public class ZoneCommand : IRocketCommand
     public string Name => "zone";
 
     public string Help => Name;
-    public string Syntax => "create/delete/node/info";
+    public string Syntax => "create/delete/node/tp/info";
 
 
     private readonly List<string> aliases = new();
@@ -34,7 +34,6 @@ public class ZoneCommand : IRocketCommand
         var position = up.Position;
         var action = GetArgument(0, true);
         var zoneName = GetArgument(1);
-        var lowerZoneName = zoneName.ToLower();
         Zone zone = null;
         object message = $"/{Name} [{Syntax}] [zone] |[type] [size]|";
         void Return(string msg = null)
@@ -47,7 +46,7 @@ public class ZoneCommand : IRocketCommand
             if (!FindZone())
                 ZoneNotFound();
         }
-        bool FindZone() => (zone = conf.Zones.FirstOrDefault(x => x.Name.ToLower().Contains(lowerZoneName))) is not null;
+        bool FindZone() => (zone = ZoneManager.Get(zoneName)) is not null;
         void ZoneNotFound() => Return($"Zone {zoneName} not found.");
         try
         {
@@ -55,6 +54,7 @@ public class ZoneCommand : IRocketCommand
             {
                 case "create":
                     {
+                        if (FindZone()) ZoneManager.Delete(zone);
                         var zoneType = GetArgument(2, true);
                         var zoneSize = GetArgument(3, true);
                         float.TryParse(zoneSize, out var size);
@@ -76,7 +76,7 @@ public class ZoneCommand : IRocketCommand
                         }
                         message = TranslateCreate(zone.Name = zoneName);
                         zone.Position = position;
-                        conf.Create(zone);
+                        ZoneManager.Create(zone);
                         break;
                     }
 
@@ -84,7 +84,7 @@ public class ZoneCommand : IRocketCommand
                 case "remove":
                     {
                         TryFindZone();
-                        conf.Delete(zone);
+                        ZoneManager.Delete(zone);
                         message = TranslateDelete(zoneName);
                         break;
                     }
@@ -95,8 +95,16 @@ public class ZoneCommand : IRocketCommand
                         if (zone is not CustomZone customZone)
                             ZoneNotFound();
                         customZone.Nodes.Add(position);
-                        conf.Save();
+                        ZoneManager.Save();
                         message = TranslateNode(zone.Name);
+                        break;
+                    }
+                case "tp":
+                case "teleport":
+                    {
+                        TryFindZone();
+                        up.Teleport(zone.Position, up.Rotation);
+                        message = TranslateTeleport(zone.Name);
                         break;
                     }
 

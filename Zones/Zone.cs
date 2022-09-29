@@ -12,7 +12,7 @@ public abstract partial class Zone
     [XmlElement]
     public virtual SVector3 Position
     {
-        get => position;
+        get => Object?.transform.position ?? position;
         set
         {
             position = value;
@@ -28,17 +28,18 @@ public abstract partial class Zone
     protected GameObject Object;
     private static GameObject _prefab;
     protected static GameObject Prefab => _prefab ??= (Assets.find(EAssetType.ITEM, 325) as ItemBarricadeAsset).barricade; // spawn locker serverside with collision. original idea: Greenorine
-    public Zone() { }
+
     internal virtual void Initialize()
     {
         if (Object is not null) return;
         UnityObject.DontDestroyOnLoad(Object = UnityObject.Instantiate(Prefab));
         UnityObject.Destroy(Object.GetComponent<Rigidbody>());
-        Position = position;
+        Position = position; // update position
     }
     internal virtual void Dispose()
     {
         UnityObject.Destroy(Object);
+        Controller.Dispose();
     }
 
     public override string ToString() => ToJsonString(this, true, new ValueTypeToStringJsonConverter());
@@ -49,10 +50,29 @@ public abstract class Zone<TController> : Zone
     [XmlIgnore, JsonIgnore]
     public virtual new TController Controller { get => (TController)base.Controller; private set => base.Controller = value; }
 
-    public Zone() { }
     internal override void Initialize()
     {
         base.Initialize();
         (Controller = Object.GetOrAddComponent<TController>()).Initialize(this);
+#if DEBUG // information for debug
+        Controller.OnPlayerEnter += PlayerEnterHandler;
+        Controller.OnPlayerExit += PlayerExitHandler;
+#endif
+    }
+    internal override void Dispose()
+    {
+#if DEBUG
+        Controller.OnPlayerEnter -= PlayerEnterHandler;
+        Controller.OnPlayerExit -= PlayerExitHandler;
+#endif
+        base.Dispose();
+    }
+    private void PlayerEnterHandler(Player player)
+    {
+        player.ReceiveMessage($"Enter {Name}");
+    }
+    private void PlayerExitHandler(Player player)
+    {
+        player.ReceiveMessage($"Exit {Name}");
     }
 }

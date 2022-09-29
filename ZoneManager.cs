@@ -4,7 +4,27 @@ public sealed partial class ZoneManager : RocketPlugin<Config>
 {
     public static List<Zone> Zones => conf.Zones;
 
-    public static void Save() => inst.Configuration.Save();
+    public static bool Create(Zone zone)
+    {
+        if (zone is null || Get(zone.Name) is not null) return false;
+        Zones.Add(zone);
+        zone.Initialize();
+        Save();
+        return true;
+    }
+    public static void Delete(Zone zone)
+    {
+        if (zone is null) return;
+        zone.Dispose();
+        Zones.Remove(zone);
+        Save();
+    }
+    public static void Save()
+    {
+        var config = inst?.Configuration;
+        lock (config)
+            config.Save();
+    }
 
     protected override void Unload()
     {
@@ -14,25 +34,10 @@ public sealed partial class ZoneManager : RocketPlugin<Config>
     protected override void Load()
     {
         foreach (var zone in Zones)
-        {
             zone.Initialize();
-#if DEBUG // information for debug
-            zone.Controller.OnPlayerEnter += player => PlayerEnterHandler(player, zone);
-            zone.Controller.OnPlayerExit += player => PlayerExitHandler(player, zone);
-#endif
-        }
     }
 
-    public static Zone Get(string name) => Instance[name];
-    public Zone this[string name] => Zones.FirstOrDefault(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-
-    private static void PlayerExitHandler(Player player, Zone zone)
-    {
-        player.ReceiveMessage($"Exit {zone.Name}");
-    }
-
-    private static void PlayerEnterHandler(Player player, Zone zone)
-    {
-        player.ReceiveMessage($"Enter {zone.Name}");
-    }
+    public static Zone Get(string name) => conf.Zones.FindByName(x => x.Name, name);
+    public static TZone Get<TZone>(string name) where TZone : Zone => conf.Zones.OfType<TZone>().FindByName(x => x.Name, name);
+    public Zone this[string name] => Get(name);
 }

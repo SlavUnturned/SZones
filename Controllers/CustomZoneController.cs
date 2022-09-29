@@ -5,11 +5,6 @@
 /// </summary>
 public class CustomZoneController : ZoneController<BoxCollider>
 {
-    private void Start()
-    {
-        StartCoroutine(FindEnteredColliders());
-    }
-
     public void SetNodes(IEnumerable<Vector3> nodes)
     {
         this.nodes.Clear();
@@ -35,11 +30,10 @@ public class CustomZoneController : ZoneController<BoxCollider>
         }
         UpdateEnterState(other);
     }
-
-    protected virtual bool UpdateEnterState(Collider other)
+    protected override bool UpdateEnterState(Collider other)
     {
-        if (other is null) return false;
-        var state = IsInside(other.ClosestPointOnBounds(Collider.center));
+        if (!other) return false;
+        var state = IsInside(other.ClosestPointOnBounds(Zone.Position));
         base.SetEnterState(other, state);
         return state;
     }
@@ -57,25 +51,5 @@ public class CustomZoneController : ZoneController<BoxCollider>
                 inside = !inside;
         }
         return inside && Limits.Y.IsInRange(point.y);
-    }
-
-    private IEnumerator FindEnteredColliders()
-    {
-        while (true)
-        {
-            yield return new WaitForSeconds(0.2f);
-            for (int i = 0; i < enteredColliders.Count;)
-            {
-                var collider = enteredColliders.ElementAtOrDefault(i);
-                if (collider is null)
-                {
-                    enteredColliders.Remove(collider);
-                    i--;
-                    continue;
-                }
-                UpdateEnterState(collider);
-                i++;
-            }
-        }
     }
 }

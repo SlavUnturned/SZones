@@ -27,29 +27,11 @@ public partial class Config : IRocketPluginConfiguration
         {
             Name = "Custom1",
             Position = position,
-            Nodes = new(new List<Vector3>()
+            Nodes = new(new List<Vector3>
             {
                 new(0, 0, 0), new(0, 0, 1), new(0, 1, 0), new(1, 0, 0),
                 new(1, 1, 1), new(0, 1, 1), new(1, 1, 0), new(1 ,0, 1)
             }.Select(x => x * size).Select(SVector3.Convert))
         });
-    }
-    public void Create(Zone zone)
-    {
-        conf.Zones.Add(zone);
-        zone.Initialize();
-        Save();
-    }
-    public void Delete(Zone zone)
-    {
-        zone.Dispose();
-        conf.Zones.Remove(zone);
-        Save();
-    }
-    public void Save()
-    {
-        var config = inst.Configuration;
-        lock (config)
-            config.Save();
     }
 }
