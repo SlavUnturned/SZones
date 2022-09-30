@@ -9,7 +9,7 @@ public class CustomZoneController : ZoneController<BoxCollider>
     {
         this.nodes.Clear();
         this.nodes.AddRange(nodes);
-        Limits = new(nodes);
+        Limits = new(this.nodes);
         Collider.center = Limits.GetVector(x => x.Center);
         Collider.size = Limits.GetVector(x => x.Delta);
     }
@@ -19,24 +19,19 @@ public class CustomZoneController : ZoneController<BoxCollider>
     protected readonly List<Vector3> nodes = new();
     public IReadOnlyCollection<Vector3> Nodes => nodes;
 
-    private new readonly List<Collider> enteredColliders = new();
+    private readonly List<Collider> colliders = new();
 
-    protected override void SetEnterState(Collider other, bool state)
+    protected new void SetEnterState(Collider other, bool state)
     {
-        if (state != enteredColliders.Contains(other))
+        if (state != colliders.Contains(other))
         {
-            if (state) enteredColliders.Add(other);
-            else enteredColliders.Remove(other);
+            if (state) colliders.Add(other);
+            else colliders.Remove(other);
         }
-        UpdateEnterState(other);
+        base.SetEnterState(other, IsPositionInside(other));
     }
-    protected override bool UpdateEnterState(Collider other)
-    {
-        if (!other) return false;
-        var state = IsInside(other.ClosestPointOnBounds(Zone.Position));
-        base.SetEnterState(other, state);
-        return state;
-    }
+    protected override void OnTriggerEnter(Collider other) => SetEnterState(other, true);
+    protected override void OnTriggerExit(Collider other) => SetEnterState(other, false);
 
     public override bool IsInside(Vector3 point)
     {
@@ -52,4 +47,6 @@ public class CustomZoneController : ZoneController<BoxCollider>
         }
         return inside && Limits.Y.IsInRange(point.y);
     }
+
+    protected override void UpdateEnteredColliders() => UpdateEnteredColliders(colliders);
 }

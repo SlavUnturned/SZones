@@ -45,7 +45,7 @@ public abstract partial class ZoneController : UnityBehaviour
     protected virtual bool UpdateEnterState(Collider other)
     {
         if (!other) return false;
-        var state = IsInside(other.ClosestPointOnBounds(Zone.Position));
+        var state = IsPositionInside(other);
         SetEnterState(other, state);
         return state;
     }
@@ -101,23 +101,29 @@ public abstract partial class ZoneController : UnityBehaviour
         else OnZombieExit?.Invoke(zombie);
     }
 
-    protected virtual IEnumerator UpdateEnteredColliders()
+    protected virtual float UpdateCollidersDelay { get; } = 0.2f;
+    protected void UpdateEnteredColliders(IList<Collider> colliders)
+    {
+        for (int i = 0; i < colliders.Count;)
+        {
+            var collider = colliders.ElementAtOrDefault(i);
+            if (!collider)
+            {
+                colliders.Remove(collider);
+                i--;
+                continue;
+            }
+            UpdateEnterState(collider);
+            i++;
+        }
+    }
+    protected virtual void UpdateEnteredColliders() => UpdateEnteredColliders(enteredColliders);
+    protected virtual IEnumerator UpdateEnteredCollidersRoutine()
     {
         while (true)
         {
-            yield return new WaitForSeconds(0.2f);
-            for (int i = 0; i < enteredColliders.Count;)
-            {
-                var collider = enteredColliders.ElementAtOrDefault(i);
-                if (!collider)
-                {
-                    enteredColliders.Remove(collider);
-                    i--;
-                    continue;
-                }
-                UpdateEnterState(collider);
-                i++;
-            }
+            yield return new WaitForSeconds(UpdateCollidersDelay);
+            UpdateEnteredColliders();
         }
     }
     #endregion
@@ -146,17 +152,21 @@ public abstract partial class ZoneController : UnityBehaviour
     public virtual bool IsInside(UnityComponent component) => IsInside(component.gameObject);
     public virtual bool IsInside(Player player) => IsInside(player.channel.owner.playerID.steamID);
     public virtual bool IsInside(CSteamID steamId) => enteredPlayers.Contains(steamId);
+    public virtual bool IsPositionInside(Collider collider) => IsInside(collider.ClosestPointOnBounds(Zone.Position));
+    public virtual bool IsPositionInside(Transform transform) => IsInside(transform.position);
+    public virtual bool IsPositionInside(GameObject @object) => IsPositionInside(@object.transform);
+    public virtual bool IsPositionInside(UnityComponent component) => IsPositionInside(component.transform);
     #endregion
 
     #region Lifetime
     protected virtual void OnDestroy() => Dispose();
-    public virtual void Dispose() 
+    public virtual void Dispose()
     {
         StopAllCoroutines();
     }
     protected virtual void Awake()
     {
-        StartCoroutine(UpdateEnteredColliders());
+        StartCoroutine(UpdateEnteredCollidersRoutine());
     }
     #endregion
 }
