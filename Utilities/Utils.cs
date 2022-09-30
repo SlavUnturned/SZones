@@ -63,9 +63,9 @@ public static partial class Utils
     public static T FindByName<T>(this IEnumerable<T> enumerable, Func<T, string> nameGetter, string name, bool fullName = false)
     {
         var lowerName = name.ToLower();
-        return enumerable.FirstOrDefault(fullName ? 
-            (x => nameGetter(x).ToLower().Contains(lowerName)) :
-            (x => nameGetter(x).Equals(lowerName, StringComparison.OrdinalIgnoreCase))
+        return enumerable.FirstOrDefault(fullName ?
+            (x => nameGetter(x).Equals(lowerName, StringComparison.OrdinalIgnoreCase)) :
+            (x => nameGetter(x).ToLower().Contains(lowerName))
         );
     }
 
