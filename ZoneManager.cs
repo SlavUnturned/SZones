@@ -35,6 +35,7 @@ public sealed partial class ZoneManager : RocketPlugin<Config>
     {
         foreach (var zone in Zones)
             zone.Initialize();
+        Physics.queriesHitTriggers = false;
     }
 
     public static Zone Get(string name) => conf.Zones.FindByName(x => x.Name, name);
