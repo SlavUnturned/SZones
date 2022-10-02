@@ -104,17 +104,15 @@ public abstract partial class ZoneController : UnityBehaviour
     protected virtual float UpdateCollidersDelay { get; } = 0.2f;
     protected void UpdateEnteredColliders(IList<Collider> colliders)
     {
-        for (int i = 0; i < colliders.Count;)
+        for (int i = 0; i < colliders.Count;i++)
         {
-            var collider = colliders.ElementAtOrDefault(i);
+            var collider = colliders.ElementAt(i);
             if (!collider)
             {
-                colliders.Remove(collider);
-                i--;
+                colliders.RemoveAt(i--);
                 continue;
             }
             UpdateEnterState(collider);
-            i++;
         }
     }
     protected virtual void UpdateEnteredColliders() => UpdateEnteredColliders(enteredColliders);
@@ -188,6 +186,8 @@ public abstract class ZoneController<TCollider> : ZoneController
         foreach (var collider in GetComponents<Collider>()) // remove previous colliders
             Destroy(collider);
         Collider.isTrigger = true;
+        Collider.material = Collider.sharedMaterial = null;
+        gameObject.layer = LayerMasks.CLIP;
         base.Awake();
     }
 }

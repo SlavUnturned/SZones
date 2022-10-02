@@ -22,8 +22,7 @@ public sealed partial class ZoneManager : RocketPlugin<Config>
     public static void Save()
     {
         var config = inst?.Configuration;
-        lock (config)
-            config.Save();
+        lock (config) config.Save();
     }
 
     protected override void Unload()
@@ -35,7 +34,6 @@ public sealed partial class ZoneManager : RocketPlugin<Config>
     {
         foreach (var zone in Zones)
             zone.Initialize();
-        Physics.queriesHitTriggers = false;
     }
 
     public static Zone Get(string name) => conf.Zones.FindByName(x => x.Name, name);

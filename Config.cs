@@ -6,6 +6,7 @@
 /// </summary>
 public partial class Config : IRocketPluginConfiguration
 {
+    public bool DebugInformation = true;
     public List<Zone> Zones = new();
     public void LoadDefaults()
     {

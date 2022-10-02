@@ -20,7 +20,7 @@ public abstract partial class Zone
             Object.transform.position = value;
         }
     }
-    public virtual bool ShouldSerializePosition() => true;    
+    public virtual bool ShouldSerializePosition() => true;
 
     [XmlIgnore, JsonIgnore]
     public virtual ZoneController Controller { get; protected set; }
@@ -31,15 +31,16 @@ public abstract partial class Zone
 
     internal virtual void Initialize()
     {
-        if (Object is not null) return;
+        if (Object) return;
         UnityObject.DontDestroyOnLoad(Object = UnityObject.Instantiate(Prefab));
-        UnityObject.Destroy(Object.GetComponent<Rigidbody>());
+        foreach(var body in Object.GetComponents<Rigidbody>())
+            UnityObject.Destroy(body);
         Position = position; // update position
     }
     internal virtual void Dispose()
     {
-        UnityObject.Destroy(Object);
-        Controller.Dispose();
+        if (Controller) UnityObject.Destroy(Controller);
+        if (Object) UnityObject.Destroy(Object);
     }
 
     public override string ToString() => ToJsonString(this, true, new ValueTypeToStringJsonConverter());
@@ -54,25 +55,23 @@ public abstract class Zone<TController> : Zone
     {
         base.Initialize();
         (Controller = Object.GetOrAddComponent<TController>()).Initialize(this);
-#if DEBUG // information for debug
-        Controller.OnPlayerEnter += PlayerEnterHandler;
-        Controller.OnPlayerExit += PlayerExitHandler;
-#endif
+        Controller.OnPlayerEnter += Debug_PlayerEnterHandler;
+        Controller.OnPlayerExit += Debug_PlayerExitHandler;
     }
     internal override void Dispose()
     {
-#if DEBUG
-        Controller.OnPlayerEnter -= PlayerEnterHandler;
-        Controller.OnPlayerExit -= PlayerExitHandler;
-#endif
+        Controller.OnPlayerEnter -= Debug_PlayerEnterHandler;
+        Controller.OnPlayerExit -= Debug_PlayerExitHandler;
         base.Dispose();
     }
-    private void PlayerEnterHandler(Player player)
+    private void Debug_PlayerEnterHandler(Player player)
     {
+        if (!conf.DebugInformation) return;
         player.ReceiveMessage($"Enter {Name}");
     }
-    private void PlayerExitHandler(Player player)
+    private void Debug_PlayerExitHandler(Player player)
     {
+        if (!conf.DebugInformation) return;
         player.ReceiveMessage($"Exit {Name}");
     }
 }
