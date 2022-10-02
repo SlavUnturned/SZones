@@ -5,7 +5,13 @@ public abstract class BoxColliderZone<TController> : Zone<TController>
 {
     public override SVector3 Position
     {
-        get => Controller?.Collider.center ?? base.Position;
+        get
+        {
+            if(Controller is null) return base.Position;
+            var center = Controller.Collider.center;
+            center.y = Controller.Collider.bounds.min.y;
+            return center;
+        }
         set
         {
             base.Position = value;
