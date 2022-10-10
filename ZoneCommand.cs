@@ -35,7 +35,7 @@ public class ZoneCommand : IRocketCommand
         var action = GetArgument(0, true);
         var zoneName = GetArgument(1);
         Zone zone = null;
-        object message = $"/{Name} [{Syntax}] [zone] |[type] [size]|";
+        object message = TranslateHelp(Name, Syntax);
         void Return(string msg = null)
         {
             message = msg ?? message;
@@ -47,7 +47,7 @@ public class ZoneCommand : IRocketCommand
                 ZoneNotFound();
         }
         bool FindZone() => (zone = ZoneManager.Get(zoneName)) is not null;
-        void ZoneNotFound() => Return($"Zone {zoneName} not found.");
+        void ZoneNotFound() => Return(TranslateNotFound(zoneName));
         try
         {
             switch (action)

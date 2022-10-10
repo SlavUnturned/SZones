@@ -21,14 +21,14 @@ public class CustomZoneController : ZoneController<BoxCollider>
 
     private readonly List<Collider> colliders = new();
 
-    protected new void SetEnterState(Collider other, bool state)
+    protected new bool SetEnterState(Collider other, bool state)
     {
         if (state != colliders.Contains(other))
         {
             if (state) colliders.Add(other);
             else colliders.Remove(other);
         }
-        base.SetEnterState(other, IsPositionInside(other));
+        return UpdateEnterState(other);
     }
     protected override void OnTriggerEnter(Collider other) => SetEnterState(other, true);
     protected override void OnTriggerExit(Collider other) => SetEnterState(other, false);

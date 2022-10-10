@@ -2,11 +2,12 @@
 
 public abstract partial class ZoneController : UnityBehaviour
 {
-    public event Action<GameObject> OnEnter, OnExit;
-    public event Action<Player> OnPlayerEnter, OnPlayerExit;
-    public event Action<Zombie> OnZombieEnter, OnZombieExit;
-    public event Action<Animal> OnAnimalEnter, OnAnimalExit;
-    public event Action<Vehicle> OnVehicleEnter, OnVehicleExit;
+    public delegate void StateUpdateHandler<T>(T target);
+    public event StateUpdateHandler<GameObject> OnEnter, OnExit;
+    public event StateUpdateHandler<Player> OnPlayerEnter, OnPlayerExit;
+    public event StateUpdateHandler<Zombie> OnZombieEnter, OnZombieExit;
+    public event StateUpdateHandler<Animal> OnAnimalEnter, OnAnimalExit;
+    public event StateUpdateHandler<Vehicle> OnVehicleEnter, OnVehicleExit;
 
     public Zone Zone { get; private set; }
     public virtual Collider Collider { get; protected set; }
@@ -20,34 +21,34 @@ public abstract partial class ZoneController : UnityBehaviour
     protected readonly List<Collider> enteredColliders = new();
     public virtual IReadOnlyCollection<Collider> EnteredColliders => enteredColliders;
     public virtual IReadOnlyCollection<GameObject> EnteredObjects => enteredColliders.Select(x => x.gameObject).ToList();
-    protected virtual void SetEnterState(Collider other, bool state)
+    protected virtual bool SetEnterState(Collider other, bool state)
     {
-        if (!other) return;
-        var entered = enteredColliders.Contains(other);
-        if (state == entered) return;
-
+        if (!other) return state;
         var @object = other.gameObject;
-        SetEnterState(@object?.GetComponent<Player>(), state);
-        SetEnterState(@object?.GetComponent<Vehicle>(), state);
-        SetEnterState(@object?.GetComponent<Animal>(), state);
-        SetEnterState(@object?.GetComponent<Zombie>(), state);
-        if (state)
-        {
-            enteredColliders.Add(other);
-            OnEnter?.Invoke(@object);
-        }
-        else
-        {
-            enteredColliders.Remove(other);
-            OnExit?.Invoke(@object);
-        }
+
+        var entered = enteredColliders.Contains(other);
+        if (state == entered) return state;
+
+        bool Set<T>(Func<T, bool, bool> func) => state = func(@object.GetComponent<T>(), state);
+        Set<Player>(SetEnterState);
+        Set<Vehicle>(SetEnterState);
+        Set<Animal>(SetEnterState);
+        Set<Zombie>(SetEnterState);
+
+        if (state == entered) return state;
+
+        if (state) enteredColliders.Add(other);
+        else enteredColliders.Remove(other);
+
+        InvokeEventsSafe(@object, state, OnEnter, OnExit);
+        return state;
     }
+
     protected virtual bool UpdateEnterState(Collider other)
     {
         if (!other) return false;
-        var state = IsPositionInside(other);
-        SetEnterState(other, state);
-        return state;
+        var state = IsPositionInside(other) && TryCheck(other);
+        return SetEnterState(other, state);
     }
     protected virtual void OnTriggerEnter(Collider other) => SetEnterState(other, true);
     protected virtual void OnTriggerExit(Collider other) => SetEnterState(other, false);
@@ -55,13 +56,13 @@ public abstract partial class ZoneController : UnityBehaviour
     protected readonly List<CSteamID> enteredPlayers = new();
     public virtual IReadOnlyCollection<CSteamID> EnteredPlayers => enteredPlayers;
 
-    protected void SetEnterState(Player player, bool state)
+    protected bool SetEnterState(Player target, bool state)
     {
-        if (!player) return;
-        if (!SetEnterState(player.channel.owner.playerID.steamID, state)) return;
+        if (!target) return state;
+        if (!SetEnterState(target.channel.owner.playerID.steamID, state)) return state;
 
-        if (state) OnPlayerEnter?.Invoke(player);
-        else OnPlayerExit?.Invoke(player);
+        InvokeEventsSafe(target, state, OnPlayerEnter, OnPlayerExit);
+        return state;
     }
     protected bool SetEnterState(CSteamID id, bool state)
     {
@@ -72,33 +73,36 @@ public abstract partial class ZoneController : UnityBehaviour
 
         return true;
     }
-    private void SetEnterState(Vehicle vehicle, bool state)
+    protected bool SetEnterState(Vehicle target, bool state)
     {
-        if (!vehicle) return;
-        if (IsInside(vehicle) == state) return;
+        if (!target) return state;
+        state = SetEnterState(target, state, OnVehicleEnter, OnVehicleExit);
 
-        if (state) OnVehicleEnter?.Invoke(vehicle);
-        else OnVehicleExit?.Invoke(vehicle);
-
-        foreach (var passanger in vehicle.passengers)
+        foreach (var passanger in target.passengers)
             if (passanger.player is { } splayer)
                 SetEnterState(splayer.player, state);
-    }
-    private void SetEnterState(Animal animal, bool state)
-    {
-        if (!animal) return;
-        if (IsInside(animal) == state) return;
 
-        if (state) OnAnimalEnter?.Invoke(animal);
-        else OnAnimalExit?.Invoke(animal);
+        return state;
     }
-    private void SetEnterState(Zombie zombie, bool state)
-    {
-        if (!zombie) return;
-        if (IsInside(zombie) == state) return;
+    protected bool SetEnterState(Animal target, bool state) => SetEnterState(target, state, OnAnimalEnter, OnAnimalExit);
+    protected bool SetEnterState(Zombie target, bool state) => SetEnterState(target, state, OnZombieEnter, OnZombieExit);
 
-        if (state) OnZombieEnter?.Invoke(zombie);
-        else OnZombieExit?.Invoke(zombie);
+    protected bool SetEnterState<T>(T target, bool state, StateUpdateHandler<T> enter, StateUpdateHandler<T> exit) 
+        where T : UnityComponent
+    {
+        if (!target) return state;
+        if (IsInside(target) == state) return state;
+
+        InvokeEventsSafe(target, state, enter, exit);
+        return state;
+    }
+
+    protected void InvokeEventsSafe<T>(T value, bool state, StateUpdateHandler<T> enter, StateUpdateHandler<T> exit)
+    {
+        try
+        {
+            (state ? enter : exit)?.Invoke(value);
+        } catch { }
     }
 
     protected virtual float UpdateCollidersDelay { get; } = 0.2f;
@@ -130,25 +134,43 @@ public abstract partial class ZoneController : UnityBehaviour
     public IEnumerable<Transform> Barricades => Zone is null ?
         Enumerable.Empty<Transform>() :
         Collider.bounds.GetRegions().GetBarricades(IsInside);
-    public IEnumerable<TComponent> GetBarricades<TComponent>() where TComponent : UnityComponent =>
-        Barricades.Select(x => x.GetComponent<TComponent>()).Where(x => x is not null);
     public IEnumerable<BarricadeDrop> BarricadeDrops => Barricades.Select(BarricadeManager.FindBarricadeByRootTransform).Where(x => x is not null);
+    public IEnumerable<TComponent> GetBarricades<TComponent>() where TComponent : UnityComponent =>
+        BarricadeDrops.Select(x => x.model).TryGetComponents<TComponent>();
     public IEnumerable<Zombie> Zombies => Zone is null ? Enumerable.Empty<Zombie>() : GetZombies(Collider.bounds.center, IsInside);
     public IEnumerable<Vehicle> Vehicles => Zone is null ? Enumerable.Empty<Vehicle>() : GetVehicles(IsInside);
     public IEnumerable<Animal> Animals => Zone is null ? Enumerable.Empty<Animal>() : GetAnimals(IsInside);
     public IEnumerable<SPlayer> SPlayers => Zone is null ? Enumerable.Empty<SPlayer>() : Provider.clients.Where(x => enteredPlayers.Contains(x.playerID.steamID));
     public IEnumerable<Player> Players => SPlayers.Select(x => x.player);
     public IEnumerable<TComponent> GetPlayers<TComponent>() where TComponent : UnityComponent =>
-        Players.Select(x => x.GetComponent<TComponent>()).Where(x => x is not null);
+        Players.TryGetComponents<TComponent>();
     #endregion
 
     #region Other
     public virtual bool IsInside(Vector3 position) => Collider.bounds.Contains(position);
     public virtual bool IsInside(Collider collider) => enteredColliders.Contains(collider);
     public virtual bool IsInside(GameObject @object) => EnteredObjects.Contains(@object);
-    public virtual bool IsInside(Transform transform) => IsInside(transform.gameObject);
     public virtual bool IsInside(UnityComponent component) => IsInside(component.gameObject);
-    public virtual bool IsInside(Player player) => IsInside(player.channel.owner.playerID.steamID);
+    public virtual bool TryCheck(UnityComponent component)
+    {
+        foreach (var innerComponent in component.GetComponents<UnityComponent>())
+            if (!Check(innerComponent))
+                return false;
+        return true;
+    }
+    public virtual bool Check(object @object) => @object switch
+    {
+        Player t => Check(t),
+        Vehicle t => Check(t),
+        Animal t => Check(t),
+        Zombie t => Check(t),
+        _ => true
+    };
+    public virtual bool Check(Player player) => !player?.life.isDead ?? false;
+    public virtual bool Check(Vehicle vehicle) => !vehicle?.isDead ?? false;
+    public virtual bool Check(Animal animal) => !animal?.isDead ?? false;
+    public virtual bool Check(Zombie zombie) => !zombie?.isDead ?? false;
+    public virtual bool IsInside(Player target) => IsInside(target.channel.owner.playerID.steamID);
     public virtual bool IsInside(CSteamID steamId) => enteredPlayers.Contains(steamId);
     public virtual bool IsPositionInside(Collider collider) => IsInside(collider.ClosestPointOnBounds(Zone.Position));
     public virtual bool IsPositionInside(Transform transform) => IsInside(transform.position);

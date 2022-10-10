@@ -43,5 +43,7 @@ public static partial class Translations
         Create = "Zone {0} created.",
         Delete = "Zone {0} deleted.",
         Node = "Added node for zone {0}.",
-        Teleport = "Teleported to zone {0}.";
+        Teleport = "Teleported to zone {0}.",
+        NotFound = "Zone {0} not found.",
+        Help = "/{0} [{1}] [zone] |[type] [size]|";
 }

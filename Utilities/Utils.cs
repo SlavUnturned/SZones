@@ -84,6 +84,9 @@ public static partial class Utils
         .Replace("\",", "\", ")
         .Replace("\"", "");
 
+    public static IEnumerable<TComponent> TryGetComponents<TComponent>(this IEnumerable<UnityComponent> components) where TComponent : UnityComponent =>
+        components.Select(x => x?.GetComponent<TComponent>()).Where(x => x);
+
     public static List<Transform> GetBarricades(this IList<RegionCoordinate> regions, Func<Vector3, bool> isInside)
     {
         List<Transform> result = new();
