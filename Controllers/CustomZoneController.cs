@@ -28,7 +28,8 @@ public class CustomZoneController : ZoneController<BoxCollider>
             if (state) colliders.Add(other);
             else colliders.Remove(other);
         }
-        return UpdateEnterState(other);
+        state = IsPositionInside(other);
+        return base.SetEnterState(other, state);
     }
     protected override void OnTriggerEnter(Collider other) => SetEnterState(other, true);
     protected override void OnTriggerExit(Collider other) => SetEnterState(other, false);

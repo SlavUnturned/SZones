@@ -50,21 +50,23 @@ public abstract partial class ZoneController : UnityBehaviour
         var state = IsPositionInside(other) && TryCheck(other);
         return SetEnterState(other, state);
     }
+    protected virtual bool UpdateEnterState(UnityComponent component) => UpdateEnterState(component?.GetComponent<Collider>());
     protected virtual void OnTriggerEnter(Collider other) => SetEnterState(other, true);
     protected virtual void OnTriggerExit(Collider other) => SetEnterState(other, false);
 
     protected readonly List<CSteamID> enteredPlayers = new();
     public virtual IReadOnlyCollection<CSteamID> EnteredPlayers => enteredPlayers;
 
+    protected bool SetEnterState(SPlayer target, bool state) => SetEnterState(target?.player, state);
     protected bool SetEnterState(Player target, bool state)
     {
         if (!target) return state;
-        if (!SetEnterState(target.channel.owner.playerID.steamID, state)) return state;
+        if (!TrySetEnterState(target.channel.owner.playerID.steamID, state)) return state;
 
         InvokeEventsSafe(target, state, OnPlayerEnter, OnPlayerExit);
         return state;
     }
-    protected bool SetEnterState(CSteamID id, bool state)
+    protected bool TrySetEnterState(CSteamID id, bool state)
     {
         if (IsInside(id) == state) return false;
 
@@ -79,15 +81,14 @@ public abstract partial class ZoneController : UnityBehaviour
         state = SetEnterState(target, state, OnVehicleEnter, OnVehicleExit);
 
         foreach (var passanger in target.passengers)
-            if (passanger.player is { } splayer)
-                SetEnterState(splayer.player, state);
+            SetEnterState(passanger.player, state);
 
         return state;
     }
     protected bool SetEnterState(Animal target, bool state) => SetEnterState(target, state, OnAnimalEnter, OnAnimalExit);
     protected bool SetEnterState(Zombie target, bool state) => SetEnterState(target, state, OnZombieEnter, OnZombieExit);
 
-    protected bool SetEnterState<T>(T target, bool state, StateUpdateHandler<T> enter, StateUpdateHandler<T> exit) 
+    protected bool SetEnterState<T>(T target, bool state, StateUpdateHandler<T> enter, StateUpdateHandler<T> exit)
         where T : UnityComponent
     {
         if (!target) return state;
@@ -102,13 +103,15 @@ public abstract partial class ZoneController : UnityBehaviour
         try
         {
             (state ? enter : exit)?.Invoke(value);
-        } catch { }
+        }
+        catch { }
     }
 
     protected virtual float UpdateCollidersDelay { get; } = 0.2f;
     protected void UpdateEnteredColliders(IList<Collider> colliders)
     {
-        for (int i = 0; i < colliders.Count;i++)
+        List<UnityComponent> other = new();
+        for (int i = 0; i < colliders.Count; i++)
         {
             var collider = colliders.ElementAt(i);
             if (!collider)
@@ -116,8 +119,22 @@ public abstract partial class ZoneController : UnityBehaviour
                 colliders.RemoveAt(i--);
                 continue;
             }
+
+            var player = collider.GetComponent<Player>();
+            if (player)
+            {
+                var vehicle = player.movement.getVehicle();
+                if (vehicle)
+                {
+                    other.Add(vehicle);
+                    continue;
+                }
+            }
+
             UpdateEnterState(collider);
         }
+        foreach (var component in other.Distinct())
+            UpdateEnterState(component);
     }
     protected virtual void UpdateEnteredColliders() => UpdateEnteredColliders(enteredColliders);
     protected virtual IEnumerator UpdateEnteredCollidersRoutine()
