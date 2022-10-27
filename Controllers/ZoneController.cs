@@ -108,7 +108,7 @@ public abstract partial class ZoneController : UnityBehaviour
     }
 
     protected virtual float UpdateCollidersDelay { get; } = 0.2f;
-    protected void UpdateEnteredColliders(IList<Collider> colliders)
+    protected void UpdateStates(IList<Collider> colliders)
     {
         List<UnityComponent> other = new();
         for (int i = 0; i < colliders.Count; i++)
@@ -136,13 +136,31 @@ public abstract partial class ZoneController : UnityBehaviour
         foreach (var component in other.Distinct())
             UpdateEnterState(component);
     }
-    protected virtual void UpdateEnteredColliders() => UpdateEnteredColliders(enteredColliders);
+    protected void UpdateStates(IList<CSteamID> playersIds)
+    {
+        var ids = playersIds.ToList();
+        foreach(var id in ids)
+        {
+            var player = PlayerTool.getPlayer(id);
+            if (!player) goto notEntered;
+            if (!(IsPositionInside(player) || IsPositionInside(player.GetComponent<Collider>()))) goto notEntered;
+
+            continue;
+            notEntered:
+            TrySetEnterState(id, false);
+        }
+    }
+    protected virtual void UpdateStates()
+    {
+        UpdateStates(enteredColliders);
+        UpdateStates(enteredPlayers);
+    }
     protected virtual IEnumerator UpdateEnteredCollidersRoutine()
     {
         while (true)
         {
             yield return new WaitForSeconds(UpdateCollidersDelay);
-            UpdateEnteredColliders();
+            UpdateStates();
         }
     }
     #endregion

@@ -49,5 +49,9 @@ public class CustomZoneController : ZoneController<BoxCollider>
         return inside && Limits.Y.IsInRange(point.y);
     }
 
-    protected override void UpdateEnteredColliders() => UpdateEnteredColliders(colliders);
+    protected override void UpdateStates()
+    {
+        UpdateStates(colliders);
+        UpdateStates(enteredPlayers);
+    }
 }
