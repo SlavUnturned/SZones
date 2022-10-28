@@ -1,4 +1,6 @@
-﻿namespace SZones;
+﻿using UnityEngine;
+
+namespace SZones;
 
 public abstract partial class ZoneController : UnityBehaviour
 {
@@ -18,16 +20,16 @@ public abstract partial class ZoneController : UnityBehaviour
     }
 
     #region Entered State
-    protected readonly List<Collider> enteredColliders = new();
+    protected readonly HashSet<Collider> enteredColliders = new();
     public virtual IReadOnlyCollection<Collider> EnteredColliders => enteredColliders;
-    public virtual IReadOnlyCollection<GameObject> EnteredObjects => enteredColliders.Select(x => x.gameObject).ToList();
+    public virtual IReadOnlyCollection<GameObject> EnteredObjects => enteredColliders.Where(x => x).Select(x => x.gameObject).Where(x => x).ToList();
     protected virtual bool SetEnterState(Collider other, bool state)
     {
-        if (!other) return state;
-        var @object = other.gameObject;
-
         var entered = enteredColliders.Contains(other);
         if (state == entered) return state;
+        if (!other) return state;
+
+        var @object = other.gameObject;
 
         bool Set<T>(Func<T, bool, bool> func) => state = func(@object.GetComponent<T>(), state);
         Set<Player>(SetEnterState);
@@ -51,10 +53,10 @@ public abstract partial class ZoneController : UnityBehaviour
         return SetEnterState(other, state);
     }
     protected virtual bool UpdateEnterState(UnityComponent component) => UpdateEnterState(component?.GetComponent<Collider>());
-    protected virtual void OnTriggerEnter(Collider other) => SetEnterState(other, true);
+    protected virtual void OnTriggerStay(Collider other) => SetEnterState(other, true);
     protected virtual void OnTriggerExit(Collider other) => SetEnterState(other, false);
 
-    protected readonly List<CSteamID> enteredPlayers = new();
+    protected readonly HashSet<CSteamID> enteredPlayers = new();
     public virtual IReadOnlyCollection<CSteamID> EnteredPlayers => enteredPlayers;
 
     protected bool SetEnterState(SPlayer target, bool state) => SetEnterState(target?.player, state);
@@ -71,7 +73,7 @@ public abstract partial class ZoneController : UnityBehaviour
         if (IsInside(id) == state) return false;
 
         if (state) enteredPlayers.Add(id);
-        else enteredPlayers.RemoveAll(x => x == id);
+        else enteredPlayers.Remove(id);
 
         return true;
     }
@@ -107,8 +109,9 @@ public abstract partial class ZoneController : UnityBehaviour
         catch { }
     }
 
-    protected virtual float UpdateCollidersDelay { get; } = 0.2f;
-    protected void UpdateStates(IList<Collider> colliders)
+    protected virtual float UpdateCollidersDelay { get; } = conf.DefaultUpdateDelay;
+    protected virtual float LocateCollidersDelay { get; } = conf.DefaultLocateDelay;
+    protected void UpdateStates(ICollection<Collider> colliders)
     {
         List<UnityComponent> other = new();
         for (int i = 0; i < colliders.Count; i++)
@@ -116,7 +119,8 @@ public abstract partial class ZoneController : UnityBehaviour
             var collider = colliders.ElementAt(i);
             if (!collider)
             {
-                colliders.RemoveAt(i--);
+                colliders.Remove(collider);
+                --i;
                 continue;
             }
 
@@ -136,18 +140,14 @@ public abstract partial class ZoneController : UnityBehaviour
         foreach (var component in other.Distinct())
             UpdateEnterState(component);
     }
-    protected void UpdateStates(IList<CSteamID> playersIds)
+    protected void UpdateStates(ICollection<CSteamID> playersIds)
     {
         var ids = playersIds.ToList();
         foreach(var id in ids)
         {
             var player = PlayerTool.getPlayer(id);
-            if (!player) goto notEntered;
-            if (!(IsPositionInside(player) || IsPositionInside(player.GetComponent<Collider>()))) goto notEntered;
-
-            continue;
-            notEntered:
-            TrySetEnterState(id, false);
+            if (!player) TrySetEnterState(id, false);
+            else UpdateEnterState(player);
         }
     }
     protected virtual void UpdateStates()
@@ -161,6 +161,29 @@ public abstract partial class ZoneController : UnityBehaviour
         {
             yield return new WaitForSeconds(UpdateCollidersDelay);
             UpdateStates();
+        }
+    }
+    protected virtual IEnumerator LocateEnteredCollidersRoutine()
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(LocateCollidersDelay);
+            LocateEnteredColliders();
+        }
+    }
+    protected virtual void LocateEnteredColliders()
+    {
+        if (Provider.clients is null) return;
+        if (VehicleManager.vehicles is null) return;
+
+        var colliders =
+            Provider.clients.Select(x => x?.model?.GetComponent<Collider>())
+            .Concat(VehicleManager.vehicles.Select(x => x?.GetComponent<Collider>()))
+            .ToArray();
+        foreach(var collider in colliders)
+        {
+            if (!collider) continue;
+            UpdateEnterState(collider);
         }
     }
     #endregion
@@ -222,6 +245,7 @@ public abstract partial class ZoneController : UnityBehaviour
     protected virtual void Awake()
     {
         StartCoroutine(UpdateEnteredCollidersRoutine());
+        StartCoroutine(LocateEnteredCollidersRoutine());
     }
     #endregion
 }

@@ -7,6 +7,7 @@
 public partial class Config : IRocketPluginConfiguration
 {
     public bool DebugInformation = true;
+    public float DefaultLocateDelay = 1.5f, DefaultUpdateDelay = 0.2f;
     public List<Zone> Zones = new();
     public void LoadDefaults()
     {
