@@ -19,19 +19,18 @@ public class CustomZoneController : ZoneController<BoxCollider>
     protected readonly List<Vector3> nodes = new();
     public IReadOnlyCollection<Vector3> Nodes => nodes;
 
-    private readonly List<Collider> colliders = new();
+    private readonly HashSet<Collider> colliders = new();
 
     protected new bool SetEnterState(Collider other, bool state)
     {
-        if (state != colliders.Contains(other))
-        {
-            if (state) colliders.Add(other);
-            else colliders.Remove(other);
-        }
+        var inside = colliders.Contains(other);
+        if (state == inside) return true;
+        if (state) colliders.Add(other);
+        else colliders.Remove(other);
         state = IsPositionInside(other);
         return base.SetEnterState(other, state);
     }
-    protected override void OnTriggerEnter(Collider other) => SetEnterState(other, true);
+    protected override void OnTriggerStay(Collider other) => SetEnterState(other, true);
     protected override void OnTriggerExit(Collider other) => SetEnterState(other, false);
 
     public override bool IsInside(Vector3 point)

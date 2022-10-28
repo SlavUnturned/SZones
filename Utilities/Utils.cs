@@ -50,6 +50,8 @@ global using Vehicle = SDG.Unturned.InteractableVehicle;
 global using Storage = SDG.Unturned.InteractableStorage;
 global using InventoryPage = SDG.Unturned.Items;
 global using static SZones.Utils;
+using System.Net;
+using System.Drawing;
 
 namespace SZones;
 
@@ -145,6 +147,7 @@ public static partial class Utils
         return result;
     }
 
+
     public static List<RegionCoordinate> GetRegions(this Bounds bounds)
     {
         List<RegionCoordinate> result = new();
@@ -152,23 +155,46 @@ public static partial class Utils
         var extents = bounds.extents;
         Vector3 startPoint = new(center.x - extents.x, center.y, center.z - extents.z);
         Vector3 endPoint = new(center.x + extents.x, center.y, center.z + extents.z);
-        getUnsafeCoordinates(startPoint, out var x1, out var y1);
-        getUnsafeCoordinates(endPoint, out var x2, out var y2);
-        if (x1 >= Regions.WORLD_SIZE || y1 >= Regions.WORLD_SIZE || x2 < 0 || y2 < 0)
+        Vector2Int 
+            startRegion = GetRegionCoordinates(startPoint), 
+            endRegion = GetRegionCoordinates(endPoint);
+
+        if (startRegion.x >= Regions.WORLD_SIZE || startRegion.y >= Regions.WORLD_SIZE || endRegion.x < 0 || endRegion.y < 0)
             return result;
-        x1 = Mathf.Max(x1, 0);
-        x2 = Mathf.Max(x2, 0);
-        y1 = Mathf.Min(y1, Regions.WORLD_SIZE - 1);
-        y2 = Mathf.Min(y2, Regions.WORLD_SIZE - 1);
-        for (byte x = (byte)x1; x <= x2; x++)
-            for (byte y = (byte)y1; y <= y2; y++)
+
+        startRegion.x = Mathf.Max(startRegion.x, 0);
+        endRegion.x = Mathf.Max(endRegion.x, 0);
+        startRegion.y = Mathf.Min(startRegion.y, Regions.WORLD_SIZE - 1);
+        endRegion.y = Mathf.Min(endRegion.y, Regions.WORLD_SIZE - 1);
+        for (byte x = (byte)startPoint.x; x <= endPoint.x; x++)
+            for (byte y = (byte)startPoint.y; y <= endPoint.y; y++)
                 result.Add(new(x, y));
         return result;
     }
+    public static bool IsInsideAnyRegion(this Vector3 position, IEnumerable<RegionCoordinate> regions) =>
+        regions.Any(x =>
+        {
+            var start = GetRegionStart(x.ToVec2Int());
+            var end = GetRegionStart(x.x + 1, x.y + 1);
+            return position.x <= end.x && position.y <= end.y &&
+                position.x >= start.x && position.y >= end.y;
+        });
 
-    private static void getUnsafeCoordinates(Vector3 point, out int x, out int y)
+    public static void GetRegionCoordinates(this Vector3 point, out int x, out int y)
     {
-        x = Mathf.FloorToInt((point.x + 4096f) / Regions.REGION_SIZE);
-        y = Mathf.FloorToInt((point.z + 4096f) / Regions.REGION_SIZE);
+        x = Mathf.FloorToInt((point.x + RegionConstant) / Regions.REGION_SIZE);
+        y = Mathf.FloorToInt((point.z + RegionConstant) / Regions.REGION_SIZE);
     }
+    public static Vector2Int GetRegionCoordinates(this Vector3 point)
+    {
+        GetRegionCoordinates(point, out var x, out var y);
+        return new(x, y);
+    }
+    public static Vector3 GetRegionStart(int x, int y) => new(
+        x * Regions.REGION_SIZE - RegionConstant,
+        y * Regions.REGION_SIZE - RegionConstant
+    );
+    public static Vector3 GetRegionStart(Vector2Int coordinate) => GetRegionStart(coordinate.x, coordinate.y);
+    public static Vector2Int ToVec2Int(this RegionCoordinate coordinate) => new(coordinate.x, coordinate.y);
+    public const float RegionConstant = 4096f;
 }
