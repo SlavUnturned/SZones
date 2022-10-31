@@ -189,16 +189,26 @@ public abstract partial class ZoneController : UnityBehaviour
     #endregion
 
     #region Entities
+    public IEnumerable<BarricadeDrop> BarricadeDrops => Zone is null ? 
+        Enumerable.Empty<BarricadeDrop>() :
+        Collider.bounds.GetRegions().GetBarricades(IsInside);
     public IEnumerable<Transform> Barricades => Zone is null ?
         Enumerable.Empty<Transform>() :
-        Collider.bounds.GetRegions().GetBarricades(IsInside);
-    public IEnumerable<BarricadeDrop> BarricadeDrops => Barricades.Select(BarricadeManager.FindBarricadeByRootTransform).Where(x => x is not null);
+        BarricadeDrops.Select(x => x.model).ToList();
     public IEnumerable<TComponent> GetBarricades<TComponent>() where TComponent : UnityComponent =>
-        BarricadeDrops.Select(x => x.model).TryGetComponents<TComponent>();
-    public IEnumerable<Zombie> Zombies => Zone is null ? Enumerable.Empty<Zombie>() : GetZombies(Collider.bounds.center, IsInside);
-    public IEnumerable<Vehicle> Vehicles => Zone is null ? Enumerable.Empty<Vehicle>() : GetVehicles(IsInside);
-    public IEnumerable<Animal> Animals => Zone is null ? Enumerable.Empty<Animal>() : GetAnimals(IsInside);
-    public IEnumerable<SPlayer> SPlayers => Zone is null ? Enumerable.Empty<SPlayer>() : Provider.clients.Where(x => enteredPlayers.Contains(x.playerID.steamID));
+        Barricades.TryGetComponents<TComponent>();
+    public IEnumerable<Zombie> Zombies => Zone is null ? 
+        Enumerable.Empty<Zombie>() :
+        GetZombies(Collider.bounds.center, IsInside);
+    public IEnumerable<Vehicle> Vehicles => Zone is null ? 
+        Enumerable.Empty<Vehicle>() :
+        GetVehicles(IsInside);
+    public IEnumerable<Animal> Animals => Zone is null ? 
+        Enumerable.Empty<Animal>() :
+        GetAnimals(IsInside);
+    public IEnumerable<SPlayer> SPlayers => Zone is null ? 
+        Enumerable.Empty<SPlayer>() :
+        Provider.clients.Where(x => enteredPlayers.Contains(x.playerID.steamID)).ToList();
     public IEnumerable<Player> Players => SPlayers.Select(x => x.player);
     public IEnumerable<TComponent> GetPlayers<TComponent>() where TComponent : UnityComponent =>
         Players.TryGetComponents<TComponent>();

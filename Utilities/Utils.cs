@@ -87,11 +87,11 @@ public static partial class Utils
         .Replace("\"", "");
 
     public static IEnumerable<TComponent> TryGetComponents<TComponent>(this IEnumerable<UnityComponent> components) where TComponent : UnityComponent =>
-        components.Select(x => x?.GetComponent<TComponent>()).Where(x => x);
+        components.Select(x => x?.GetComponent<TComponent>()).Where(x => x).ToList();
 
-    public static List<Transform> GetBarricades(this IList<RegionCoordinate> regions, Func<Vector3, bool> isInside)
+    public static List<BarricadeDrop> GetBarricades(this IList<RegionCoordinate> regions, Func<Vector3, bool> isInside)
     {
-        List<Transform> result = new();
+        List<BarricadeDrop> result = new();
         if (BarricadeManager.vehicleRegions is null) return result;
         for (int i = 0; i < regions.Count; i++)
         {
@@ -103,7 +103,7 @@ public static partial class Utils
                 var model = drop.model;
                 if (!model || !isInside(model.position))
                     continue;
-                result.Add(model);
+                result.Add(drop);
             }
         }
         return result;
@@ -166,8 +166,8 @@ public static partial class Utils
         endRegion.x = Mathf.Max(endRegion.x, 0);
         startRegion.y = Mathf.Min(startRegion.y, Regions.WORLD_SIZE - 1);
         endRegion.y = Mathf.Min(endRegion.y, Regions.WORLD_SIZE - 1);
-        for (byte x = (byte)startPoint.x; x <= endPoint.x; x++)
-            for (byte y = (byte)startPoint.y; y <= endPoint.y; y++)
+        for (byte x = (byte)startRegion.x; x <= endRegion.x; x++)
+            for (byte y = (byte)startRegion.y; y <= endRegion.y; y++)
                 result.Add(new(x, y));
         return result;
     }
