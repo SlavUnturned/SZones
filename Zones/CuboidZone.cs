@@ -13,7 +13,7 @@ public class CuboidZone : BoxColliderZone<CuboidZoneController>
         set
         {
             size = value;
-            if (Controller is null) return;
+            if (!controller) return;
             Controller.Collider.size = size * SizeModifier;
         }
     }

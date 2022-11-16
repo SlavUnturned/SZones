@@ -8,14 +8,14 @@ public sealed partial class ZoneManager : RocketPlugin<Config>
     {
         if (zone is null || Get(zone.Name) is not null) return false;
         Zones.Add(zone);
-        zone.Initialize();
         Save();
+        SafeInitialize(zone);
         return true;
     }
     public static void Delete(Zone zone)
     {
         if (zone is null) return;
-        zone.Dispose();
+        SafeFinalize(zone);
         Zones.Remove(zone);
         Save();
     }
@@ -25,15 +25,32 @@ public sealed partial class ZoneManager : RocketPlugin<Config>
         lock (config) config.Save();
     }
 
+    public static void SafeFinalize(Zone zone)
+    {
+        try
+        {
+            zone.Finalize();
+        }
+        catch (Exception ex) { Logger.Log(ex); }
+    }
+    public static void SafeInitialize(Zone zone)
+    {
+        try
+        {
+            zone.Initialize();
+        }
+        catch (Exception ex) { Logger.Log(ex); }
+    }
+
     protected override void Unload()
     {
         foreach (var zone in Zones)
-            zone.Dispose();
+            SafeFinalize(zone);
     }
     protected override void Load()
     {
         foreach (var zone in Zones)
-            zone.Initialize();
+            SafeInitialize(zone);
     }
 
     public static Zone Get(string name) => conf.Zones.FindByName(x => x.Name, name);

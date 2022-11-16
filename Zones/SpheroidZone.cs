@@ -13,7 +13,7 @@ public class SpheroidZone : Zone<SpheroidZoneController>
         set
         {
             radius = value;
-            if (Controller is null) return;
+            if (!controller) return;
             Controller.Collider.radius = radius * RadiusModifier;
         }
     }

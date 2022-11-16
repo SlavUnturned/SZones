@@ -7,7 +7,7 @@ public abstract class BoxColliderZone<TController> : Zone<TController>
     {
         get
         {
-            if(Controller is null) return base.Position;
+            if(!controller) return base.Position;
             var center = Controller.Collider.center;
             center.y = Controller.Collider.bounds.min.y;
             return center;
@@ -15,7 +15,7 @@ public abstract class BoxColliderZone<TController> : Zone<TController>
         set
         {
             base.Position = value;
-            if (Controller is null) return;
+            if (!controller) return;
             Controller.Collider.center = Position;
         }
     }

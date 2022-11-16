@@ -59,7 +59,8 @@ public static partial class Utils
 {
     // just shorthands, you can simply remove/rename them if you want to.
     public static ZoneManager inst => ZoneManager.Instance;
-    public static Config conf => ZoneManager.Instance.Configuration.Instance;
+    static Config config;
+    public static Config conf => config ??= ZoneManager.Instance?.Configuration?.Instance;
     //
 
     public static T FindByName<T>(this IEnumerable<T> enumerable, Func<T, string> nameGetter, string name, bool fullName = false)

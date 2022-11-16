@@ -16,14 +16,23 @@ public abstract partial class Zone
         set
         {
             position = value;
-            if (Object is null) return;
+            if (!Object) return;
             Object.transform.position = value;
         }
     }
     public virtual bool ShouldSerializePosition() => true;
 
+    protected ZoneController controller;
     [XmlIgnore, JsonIgnore]
-    public virtual ZoneController Controller { get; protected set; }
+    public virtual ZoneController Controller
+    {
+        get
+        {
+            TryReinitialize();
+            return controller;
+        }
+        protected set => controller = value;
+    }
 
     protected GameObject Object;
     private static GameObject _prefab;
@@ -33,15 +42,47 @@ public abstract partial class Zone
     {
         if (Object) return;
         UnityObject.DontDestroyOnLoad(Object = UnityObject.Instantiate(Prefab));
+
         foreach(var body in Object.GetComponents<Rigidbody>())
             UnityObject.Destroy(body);
+
+        InitializeController();
+
         Position = position; // update position
     }
-    internal virtual void Dispose()
+
+    internal virtual void InitializeController() { }
+
+    internal virtual void Finalize()
     {
-        if (Controller) UnityObject.Destroy(Controller);
-        if (Object) UnityObject.Destroy(Object);
+        FinalizeController();
+        UnityObject.Destroy(Object);
     }
+
+    internal virtual void FinalizeController()
+    {
+        UnityObject.Destroy(controller);
+    }
+
+    public virtual void Reinitialize()
+    {
+        Finalize();
+        Initialize();
+    }
+
+    public virtual void ReinitializeController()
+    {
+        FinalizeController();
+        InitializeController();
+    }
+
+    public void TryReinitialize()
+    {
+        if (!Object) Reinitialize();
+        else if (!controller) ReinitializeController();
+    }
+
+    public virtual bool IsValid() => Object && controller;
 
     public override string ToString() => ToJsonString(this, true, new ValueTypeToStringJsonConverter());
 }
@@ -49,21 +90,28 @@ public abstract class Zone<TController> : Zone
     where TController : ZoneController
 {
     [XmlIgnore, JsonIgnore]
-    public virtual new TController Controller { get => (TController)base.Controller; private set => base.Controller = value; }
+    public virtual new TController Controller 
+    { 
+        get => (TController)base.Controller;
+        private set => base.Controller = value; 
+    }
 
-    internal override void Initialize()
+    internal override void InitializeController()
     {
-        base.Initialize();
-        (Controller = Object.GetOrAddComponent<TController>()).Initialize(this);
-        Controller.OnPlayerEnter += Debug_PlayerEnterHandler;
-        Controller.OnPlayerExit += Debug_PlayerExitHandler;
+        base.InitializeController();
+        if (controller) return;
+        (controller = Object.GetOrAddComponent<TController>()).Initialize(this);
+        controller.OnPlayerEnter += Debug_PlayerEnterHandler;
+        controller.OnPlayerExit += Debug_PlayerExitHandler;
     }
-    internal override void Dispose()
+
+    internal override void FinalizeController()
     {
-        Controller.OnPlayerEnter -= Debug_PlayerEnterHandler;
-        Controller.OnPlayerExit -= Debug_PlayerExitHandler;
-        base.Dispose();
+        if (!controller) return;
+        controller.OnPlayerEnter -= Debug_PlayerEnterHandler;
+        controller.OnPlayerExit -= Debug_PlayerExitHandler;
     }
+
     private void Debug_PlayerEnterHandler(Player player)
     {
         if (!conf.DebugInformation) return;
